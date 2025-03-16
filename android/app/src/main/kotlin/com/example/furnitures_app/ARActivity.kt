@@ -1,6 +1,5 @@
 package com.example.furnitures_app
 
-import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -11,17 +10,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,20 +25,36 @@ import com.google.ar.core.ArCoreApk
 
 class ARActivity : ComponentActivity() {
 
+    //private var userRequestedInstall = true
+    private var showUpdateARDialogState by mutableStateOf(false)
     override fun onCreate(savedInstanceState: Bundle?) {
         val message = intent?.extras?.getString("message")
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-
+            if (showUpdateARDialogState) {
+                val dialogModel = DialogModel(
+                    title = "Update AR Services",
+                    message = "Google Play Services for AR needs update",
+                    icon = Icons.Default.Warning,
+                    onDismiss = { finish() },
+                    confirmText = "Update",
+                    onConfirm = { requestARInstall() },
+                    iconDescription = "Warning Icon"
+                )
+                CustomDialog(dialogModel)
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        val isReady = checkARUpdateStatus()
-        Log.d("checkARUpdateStatus", "checkARUpdateStatus: $isReady")
-
+        if (!checkARUpdateStatus()) {
+            showUpdateARDialogState = true
+        } else {
+            showUpdateARDialogState = false
+            //startARSession() // Optional: Start AR experience now
+        }
     }
 
     private fun checkARUpdateStatus(): Boolean {
@@ -53,28 +64,18 @@ class ARActivity : ComponentActivity() {
                 true
             }
 
-            ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED, ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD -> {
-                requestARInstall()
-            }
-
             else -> {
-                false;
+                false
             }
         }
     }
 
-    private fun requestARInstall(): Boolean {
+    private fun requestARInstall() {
         try {
-            return when (ArCoreApk.getInstance().requestInstall(this, true)) {
-                ArCoreApk.InstallStatus.INSTALL_REQUESTED -> {
-                    false
-                }
-
-                ArCoreApk.InstallStatus.INSTALLED -> true
-            }
+            ArCoreApk.getInstance().requestInstall(this, true)
         } catch (e: Exception) {
             Log.d("Request AR Install", "ARCore not installed: " + e.message.toString())
-            return false
+            return
         }
     }
 }

@@ -47,12 +47,12 @@ fun CustomDialog(
 }
 
 data class DialogModel(
-    val title: String?,
-    val icon:  ImageVector?,
-    val iconDescription: String?,
+    val title: String? = null,
+    val icon:  ImageVector? = null,
+    val iconDescription: String? = null,
     val message: String,
     val confirmText: String,
     val dismissText: String = "Cancel",
     val onConfirm: () -> Unit,
-    val onDismiss: (() -> Unit)?,
+    val onDismiss: (() -> Unit)? = null,
 )

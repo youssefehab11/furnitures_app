@@ -7,9 +7,23 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Colors
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
@@ -17,11 +31,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
-import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
@@ -46,7 +63,6 @@ private const val kModelFile = "chair.glb"
 
 class ARActivity : ComponentActivity() {
 
-    //    private var showUpdateARDialogState by mutableStateOf(false)
     private val viewModel: ARViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         val message = intent?.extras?.getString("message")
@@ -55,6 +71,7 @@ class ARActivity : ComponentActivity() {
         setContent {
             ARView(
                 viewModel = viewModel,
+                modifier = Modifier.fillMaxSize(),
                 onDismissUpdate = { finish() },
                 onConfirmUpdate = { viewModel.requestARInstall(this) },
                 onConfirmExit = { anchor, childNodes ->
@@ -66,10 +83,11 @@ class ARActivity : ComponentActivity() {
     }
 
     private fun clearAnchorsAndNodes(anchor: Anchor?, childNodes: MutableList<Node>) {
-        childNodes.clear()
-        if (anchor != null) {
-            anchor.detach()
-            anchor.destroy()
+
+        if (childNodes.isNotEmpty()) {
+            childNodes.clear()
+            anchor?.detach()
+            anchor?.destroy()
         }
     }
 
@@ -77,21 +95,12 @@ class ARActivity : ComponentActivity() {
         super.onResume()
         viewModel.getShowUpdateARDialogState()
     }
-
-
-//    private fun requestARInstall() {
-//        try {
-//            ArCoreApk.getInstance().requestInstall(this, true)
-//        } catch (e: Exception) {
-//            Log.d("Request AR Install", "ARCore not installed: " + e.message.toString())
-//            return
-//        }
-//    }
 }
 
 @Composable
 fun ARView(
     onConfirmExit: (Anchor?, MutableList<Node>) -> Unit,
+    modifier: Modifier,
     onDismissUpdate: () -> Unit,
     onConfirmUpdate: () -> Unit,
     viewModel: ARViewModel
@@ -108,18 +117,57 @@ fun ARView(
         )
         CustomDialog(dialogModel)
     } else {
-        Box {
-            ARCameraView(viewModel = viewModel) { anchor, childNodes ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            ARCameraView(viewModel = viewModel, modifier = modifier) { anchor, childNodes ->
                 onConfirmExit(anchor, childNodes)
             }
+            SpeedDialObjManipulation()
         }
 
     }
 }
 
 @Composable
+fun SpeedDialObjManipulation() {
+    var isExpand by remember { mutableStateOf(false) }
+    Box(
+        contentAlignment = Alignment.TopEnd,
+        modifier = Modifier
+            .statusBarsPadding()
+            .fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(shape = RoundedCornerShape(50.dp))
+                .background(color = Color(0x40000000))
+        ) {
+            AnimatedVisibility(visible = isExpand) {
+                Row {
+                    IconButton(
+                        onClick = {},
+                    ) {
+                        Icon(painterResource(R.drawable.transition_cube), contentDescription = "", tint = Color.White)
+                    }
+                    IconButton(
+                        onClick = {},
+                    ) {
+                        Icon(painterResource(R.drawable.rotation_cube), contentDescription = "", tint = Color.White)
+                    }
+                }
+            }
+            IconButton(
+                onClick = { isExpand = !isExpand },
+            ) {
+                Icon(painterResource(R.drawable.cube), contentDescription = "", tint = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
 fun ARCameraView(
     viewModel: ARViewModel,
+    modifier: Modifier,
     onConfirm: (Anchor?, MutableList<Node>) -> Unit,
 ) {
 
@@ -140,7 +188,7 @@ fun ARCameraView(
         viewModel.toggleExitDialogState()
     }
     ARScene(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         engine = engine,
         modelLoader = modelLoader,
         materialLoader = materialLoader,
@@ -206,7 +254,10 @@ fun createAnchorNode(
 
     ).apply {
         // Model Node needs to be editable for independent rotation from the anchor rotation
+        //Fixed Model
         isEditable = true
+        isPositionEditable = true
+        isRotationEditable = false
         isScaleEditable = false
     }
 //    val boundingBoxNode = CubeNode(

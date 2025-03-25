@@ -1,7 +1,6 @@
 package com.example.furnitures_app
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -9,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,45 +16,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Colors
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.google.android.filament.Engine
-import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
-import com.google.ar.core.Plane
 import io.github.sceneview.ar.ARScene
 import io.github.sceneview.ar.arcore.createAnchorOrNull
-import io.github.sceneview.ar.arcore.getUpdatedPlanes
-import io.github.sceneview.ar.node.AnchorNode
-import io.github.sceneview.ar.scene.destroy
-import io.github.sceneview.loaders.MaterialLoader
-import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.node.ModelNode
-import io.github.sceneview.node.Node
+import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
-import io.github.sceneview.rememberNodes
+import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
 
 
@@ -64,6 +51,7 @@ private const val kModelFile = "chair.glb"
 class ARActivity : ComponentActivity() {
 
     private val viewModel: ARViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val message = intent?.extras?.getString("message")
         super.onCreate(savedInstanceState)
@@ -74,22 +62,14 @@ class ARActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxSize(),
                 onDismissUpdate = { finish() },
                 onConfirmUpdate = { viewModel.requestARInstall(this) },
-                onConfirmExit = { anchor, childNodes ->
-                    clearAnchorsAndNodes(anchor, childNodes)
+                onConfirmExit = {
+                    viewModel.clearAnchorsAndNodes()
                     finish()
                 }
             )
         }
     }
 
-    private fun clearAnchorsAndNodes(anchor: Anchor?, childNodes: MutableList<Node>) {
-
-        if (childNodes.isNotEmpty()) {
-            childNodes.clear()
-            anchor?.detach()
-            anchor?.destroy()
-        }
-    }
 
     override fun onResume() {
         super.onResume()
@@ -99,7 +79,7 @@ class ARActivity : ComponentActivity() {
 
 @Composable
 fun ARView(
-    onConfirmExit: (Anchor?, MutableList<Node>) -> Unit,
+    onConfirmExit: () -> Unit,
     modifier: Modifier,
     onDismissUpdate: () -> Unit,
     onConfirmUpdate: () -> Unit,
@@ -118,48 +98,80 @@ fun ARView(
         CustomDialog(dialogModel)
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
-            ARCameraView(viewModel = viewModel, modifier = modifier) { anchor, childNodes ->
-                onConfirmExit(anchor, childNodes)
+            ARCameraView(
+                viewModel = viewModel,
+                modifier = modifier
+            ) {
+                onConfirmExit()
             }
-            SpeedDialObjManipulation()
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(8.dp)
+            ) {
+                DoneButton(viewModel)
+                SpeedDialObjManipulation(viewModel)
+            }
         }
 
     }
 }
 
 @Composable
-fun SpeedDialObjManipulation() {
-    var isExpand by remember { mutableStateOf(false) }
-    Box(
-        contentAlignment = Alignment.TopEnd,
+fun DoneButton(viewModel: ARViewModel) {
+    Row {
+        AnimatedVisibility(visible = viewModel.manipulationListExpandState) {
+            Button(onClick = {
+                viewModel.finishManipulation()
+            }) {
+                Text("Done")
+            }
+        }
+    }
+}
+
+@Composable
+fun SpeedDialObjManipulation(
+    viewModel: ARViewModel
+) {
+
+    Row(
         modifier = Modifier
-            .statusBarsPadding()
-            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(50.dp))
+            .background(color = Color(0x40000000))
     ) {
-        Row(
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(50.dp))
-                .background(color = Color(0x40000000))
-        ) {
-            AnimatedVisibility(visible = isExpand) {
-                Row {
-                    IconButton(
-                        onClick = {},
-                    ) {
-                        Icon(painterResource(R.drawable.transition_cube), contentDescription = "", tint = Color.White)
-                    }
-                    IconButton(
-                        onClick = {},
-                    ) {
-                        Icon(painterResource(R.drawable.rotation_cube), contentDescription = "", tint = Color.White)
-                    }
+        AnimatedVisibility(visible = viewModel.manipulationListExpandState) {
+            Row {
+                IconButton(
+                    onClick = {
+                        viewModel.enableNodeTransition()
+                    },
+                ) {
+                    Icon(
+                        painterResource(R.drawable.transition_cube),
+                        contentDescription = "transition icon",
+                        tint = if(viewModel.isNodeTransitionSelected) Color.Green else Color.White
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        viewModel.enableNodeRotation()
+                    },
+                ) {
+                    Icon(
+                        painterResource(R.drawable.rotation_cube),
+                        contentDescription = "rotation icon",
+                        tint = if(viewModel.isNodeRotationSelected) Color.Green else Color.White
+                    )
                 }
             }
-            IconButton(
-                onClick = { isExpand = !isExpand },
-            ) {
-                Icon(painterResource(R.drawable.cube), contentDescription = "", tint = Color.White)
-            }
+        }
+        IconButton(
+            onClick = { viewModel.toggleManipulationListExpandState() },
+        ) {
+            Icon(painterResource(R.drawable.cube), contentDescription = "", tint = Color.White)
         }
     }
 }
@@ -168,7 +180,7 @@ fun SpeedDialObjManipulation() {
 fun ARCameraView(
     viewModel: ARViewModel,
     modifier: Modifier,
-    onConfirm: (Anchor?, MutableList<Node>) -> Unit,
+    onConfirm: () -> Unit,
 ) {
 
     val engine = rememberEngine()
@@ -179,11 +191,11 @@ fun ARCameraView(
 
     var frame by remember { mutableStateOf<Frame?>(null) }
 
-    val childNodes = rememberNodes()
+    val childNodes = viewModel.childNodes
 
     val view = rememberView(engine)
     val collisionSystem = rememberCollisionSystem(view)
-    var myAnchor: Anchor? = null
+
     BackHandler {
         viewModel.toggleExitDialogState()
     }
@@ -207,20 +219,29 @@ fun ARCameraView(
         planeRenderer = planeRenderer,
         onSessionUpdated = { session, updatedFrame ->
             frame = updatedFrame
-            if (childNodes.isEmpty()) {
-                updatedFrame.getUpdatedPlanes()
-                    .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-                    ?.let { it.createAnchorOrNull(it.centerPose) }?.let { anchor ->
-                        myAnchor = anchor
-                        childNodes += createAnchorNode(
+        },
+        onGestureListener = rememberOnGestureListener(
+            onSingleTapConfirmed = { motionEvent, node ->
+                if (node == null && childNodes.isEmpty()) {
+                    val hitTest = frame?.hitTest(motionEvent.x, motionEvent.y)
+                    hitTest?.firstOrNull {
+                        it.isValid(
+                            depthPoint = false,
+                            point = false
+                        )
+                    }?.createAnchorOrNull()?.let { anchor ->
+                        viewModel.anchor = anchor
+                        viewModel.createAnchorNode(
                             engine = engine,
                             modelLoader = modelLoader,
                             materialLoader = materialLoader,
+                            model = kModelFile,
                             anchor = anchor
                         )
                     }
+                }
             }
-        },
+        )
     ) {
 
     }
@@ -230,7 +251,7 @@ fun ARCameraView(
             icon = Icons.Default.Info,
             onDismiss = { viewModel.toggleExitDialogState() },
             confirmText = "Exit",
-            onConfirm = { onConfirm(myAnchor, childNodes) },
+            onConfirm = { onConfirm() },
             iconDescription = "Info Icon"
         )
         CustomDialog(
@@ -238,43 +259,4 @@ fun ARCameraView(
         )
     }
 
-}
-
-fun createAnchorNode(
-    engine: Engine,
-    modelLoader: ModelLoader,
-    materialLoader: MaterialLoader,
-    anchor: Anchor
-): AnchorNode {
-    val anchorNode = AnchorNode(engine = engine, anchor = anchor)
-    val modelNode = ModelNode(
-        modelInstance = modelLoader.createModelInstance(kModelFile),
-        // Scale to fit in a 0.5 meters cube
-        //scaleToUnits = 0.5f
-
-    ).apply {
-        // Model Node needs to be editable for independent rotation from the anchor rotation
-        //Fixed Model
-        isEditable = true
-        isPositionEditable = true
-        isRotationEditable = false
-        isScaleEditable = false
-    }
-//    val boundingBoxNode = CubeNode(
-//        engine,
-//        size = modelNode.extents,
-//        center = modelNode.center,
-//        materialInstance = materialLoader.createColorInstance(Color.White.copy(alpha = 0.5f))
-//    ).apply {
-//        isVisible = false
-//    }
-//    modelNode.addChildNode(boundingBoxNode)
-    anchorNode.addChildNode(modelNode)
-//
-//    listOf(modelNode, anchorNode).forEach {
-//        it.onEditingChanged = { editingTransforms ->
-//            boundingBoxNode.isVisible = editingTransforms.isNotEmpty()
-//        }
-//    }
-    return anchorNode
 }

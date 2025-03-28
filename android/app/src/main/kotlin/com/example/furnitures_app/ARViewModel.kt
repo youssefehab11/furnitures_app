@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.ArCoreApk
@@ -14,16 +15,24 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.Node
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ARViewModel : ViewModel() {
 
     private val arHelper = ARHelper()
 
-    var isNodeTransitionSelected by mutableStateOf(false)
+    var guidesState by mutableStateOf(Guides.SHOW_FIRST)
 
-    var isNodeRotationSelected by mutableStateOf(false)
-
-    var manipulationListExpandState by  mutableStateOf(false)
+    var manipulationState by mutableStateOf(
+        ManipulationState(
+            isPositionEditable = true,
+            isRotationEditable = false,
+            isManipulationListExpand = false,
+            isNodeTransitionSelected = false,
+            isNodeRotationSelected = false
+        )
+    )
 
     var anchor: Anchor? by mutableStateOf(null)
 
@@ -83,14 +92,18 @@ class ARViewModel : ViewModel() {
     fun enableNodeTransition() {
         if (childNodes.isNotEmpty()) {
             val modelNode = childNodes[0].childNodes.first()
-            modelNode.isPositionEditable = false
-            modelNode.isRotationEditable = false
-            isNodeTransitionSelected = true
-            isNodeRotationSelected = false
+            manipulationState = manipulationState.copy(
+                isPositionEditable = false,
+                isRotationEditable = false,
+                isNodeTransitionSelected = true,
+                isNodeRotationSelected = false
+            )
+            modelNode.isPositionEditable = manipulationState.isPositionEditable
+            modelNode.isRotationEditable = manipulationState.isRotationEditable
             val lockedY = modelNode.position.y
-            modelNode.onEditingChanged = {editingTransforms ->
+            modelNode.onEditingChanged = { editingTransforms ->
                 val currentPos = modelNode.position
-                modelNode.position = Position(currentPos.x,lockedY,currentPos.z)
+                modelNode.position = Position(currentPos.x, lockedY, currentPos.z)
             }
         }
     }
@@ -98,24 +111,56 @@ class ARViewModel : ViewModel() {
     fun enableNodeRotation() {
         if (childNodes.isNotEmpty()) {
             val modelNode = childNodes[0].childNodes.first()
-            modelNode.isRotationEditable = true
-            modelNode.isPositionEditable = true
-            isNodeTransitionSelected = false
-            isNodeRotationSelected = true
+            manipulationState = manipulationState.copy(
+                isPositionEditable = true,
+                isRotationEditable = true,
+                isNodeTransitionSelected = false,
+                isNodeRotationSelected = true
+            )
+            modelNode.isRotationEditable = manipulationState.isRotationEditable
+            modelNode.isPositionEditable = manipulationState.isPositionEditable
         }
 
     }
 
     fun finishManipulation() {
-        val modelNode = childNodes[0].childNodes.first()
-        modelNode.isPositionEditable = true
-        modelNode.isRotationEditable = false
-        manipulationListExpandState = false
-        isNodeTransitionSelected = false
-        isNodeRotationSelected = false
+        manipulationState = manipulationState.copy(
+            isPositionEditable = true,
+            isRotationEditable = false,
+            isNodeTransitionSelected = false,
+            isNodeRotationSelected = false,
+            isManipulationListExpand = false
+        )
+        if (childNodes.isNotEmpty()) {
+            val modelNode = childNodes[0].childNodes.first()
+            modelNode.isPositionEditable = manipulationState.isPositionEditable
+            modelNode.isRotationEditable = manipulationState.isRotationEditable
+        }
     }
 
-    fun toggleManipulationListExpandState(){
-        manipulationListExpandState = !manipulationListExpandState
+    fun toggleManipulationListExpandState() {
+        if (manipulationState.isManipulationListExpand) {
+            finishManipulation()
+        } else {
+            manipulationState = manipulationState.copy(
+                isManipulationListExpand = !manipulationState.isManipulationListExpand
+            )
+        }
     }
+
+    fun hideGuides(){
+        guidesState = Guides.HIDE
+        Log.d("hideGuides", "hideGuides: I'm in the hide method")
+    }
+
+    fun updateGuides(){
+        guidesState = Guides.SHOW_SECOND
+
+    }
+}
+
+enum class Guides {
+    SHOW_FIRST,
+    SHOW_SECOND,
+    HIDE
 }

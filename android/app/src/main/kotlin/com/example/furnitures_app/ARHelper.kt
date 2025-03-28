@@ -75,3 +75,11 @@ class ARHelper {
         }
     }
 }
+
+data class ManipulationState(
+    val isPositionEditable: Boolean,
+    val isRotationEditable: Boolean,
+    val isManipulationListExpand: Boolean,
+    val isNodeTransitionSelected: Boolean,
+    val isNodeRotationSelected: Boolean
+)

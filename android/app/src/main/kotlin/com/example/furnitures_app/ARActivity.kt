@@ -10,11 +10,14 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -24,19 +27,30 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import io.github.sceneview.ar.ARScene
 import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
@@ -44,6 +58,7 @@ import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
+import kotlinx.coroutines.delay
 
 
 private const val kModelFile = "chair.glb"
@@ -97,13 +112,15 @@ fun ARView(
         )
         CustomDialog(dialogModel)
     } else {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = modifier) {
             ARCameraView(
                 viewModel = viewModel,
                 modifier = modifier
             ) {
                 onConfirmExit()
             }
+            if(viewModel.guidesState != Guides.HIDE)
+                ARGuide(modifier, viewModel)
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
@@ -120,9 +137,104 @@ fun ARView(
 }
 
 @Composable
+fun ARGuide(modifier: Modifier, viewModel: ARViewModel) {
+    if(viewModel.guidesState == Guides.SHOW_FIRST){
+        CustomGuide(
+            modifier = modifier,
+            lottieResId = R.raw.ar_scan,
+            message = "Move your device around the room where you want to place the furniture"
+        )
+//        val preloaderLottieComposition by rememberLottieComposition(
+//            LottieCompositionSpec.RawRes(
+//                R.raw.ar_scan
+//            )
+//        )
+//
+//        val preloaderProgress by animateLottieCompositionAsState(
+//            preloaderLottieComposition,
+//            iterations = LottieConstants.IterateForever,
+//            isPlaying = true
+//        )
+//
+//        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+//            Box(
+//                modifier = Modifier
+//                    .width(450.dp)
+//                    .height(450.dp)
+//                    .clip(shape = RoundedCornerShape(16.dp))
+//                    .background(color = colorResource(R.color.black_transparent))
+//            ) {
+//                Column {
+//
+//                    LottieAnimation(
+//                        composition = preloaderLottieComposition,
+//                        progress = preloaderProgress,
+//                        modifier = Modifier.weight(0.8f)
+//                    )
+//                    Text(
+//                        "",
+//                        textAlign = TextAlign.Center,
+//                        color = Color.White,
+//                        fontSize = 24.sp,
+//                        modifier = Modifier.padding(8.dp).weight(0.2f)
+//                    )
+//                }
+//
+//            }
+//        }
+    }
+    else if(viewModel.guidesState == Guides.SHOW_SECOND){
+        CustomGuide(
+            modifier = modifier,
+            lottieResId = R.raw.tap,
+            message = "Tap the area you to place the furniture"
+        )
+
+//        val preloaderLottieComposition by rememberLottieComposition(
+//            LottieCompositionSpec.RawRes(
+//                R.raw.tap
+//            )
+//        )
+//
+//        val preloaderProgress by animateLottieCompositionAsState(
+//            preloaderLottieComposition,
+//            iterations = LottieConstants.IterateForever,
+//            isPlaying = true
+//        )
+//
+//        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+//            Box(
+//                modifier = Modifier
+//                    .width(450.dp)
+//                    .height(450.dp)
+//                    .clip(shape = RoundedCornerShape(16.dp))
+//                    .background(color = colorResource(R.color.black_transparent))
+//            ) {
+//                Column {
+//
+//                    LottieAnimation(
+//                        composition = preloaderLottieComposition,
+//                        progress = preloaderProgress,
+//                        modifier = Modifier.weight(0.8f)
+//                    )
+//                    Text(
+//                        "Tap the area you to place the furniture",
+//                        textAlign = TextAlign.Center,
+//                        color = Color.White,
+//                        fontSize = 24.sp,
+//                        modifier = Modifier.padding(8.dp).weight(0.2f)
+//                    )
+//                }
+//
+//            }
+//        }
+    }
+}
+
+@Composable
 fun DoneButton(viewModel: ARViewModel) {
     Row {
-        AnimatedVisibility(visible = viewModel.manipulationListExpandState) {
+        AnimatedVisibility(visible = viewModel.manipulationState.isManipulationListExpand) {
             Button(onClick = {
                 viewModel.finishManipulation()
             }) {
@@ -140,9 +252,9 @@ fun SpeedDialObjManipulation(
     Row(
         modifier = Modifier
             .clip(shape = RoundedCornerShape(50.dp))
-            .background(color = Color(0x40000000))
+            .background(color = colorResource(R.color.black_transparent))
     ) {
-        AnimatedVisibility(visible = viewModel.manipulationListExpandState) {
+        AnimatedVisibility(visible = viewModel.manipulationState.isManipulationListExpand) {
             Row {
                 IconButton(
                     onClick = {
@@ -152,7 +264,7 @@ fun SpeedDialObjManipulation(
                     Icon(
                         painterResource(R.drawable.transition_cube),
                         contentDescription = "transition icon",
-                        tint = if(viewModel.isNodeTransitionSelected) Color.Green else Color.White
+                        tint = if (viewModel.manipulationState.isNodeTransitionSelected) Color.Green else Color.White
                     )
                 }
                 IconButton(
@@ -163,7 +275,7 @@ fun SpeedDialObjManipulation(
                     Icon(
                         painterResource(R.drawable.rotation_cube),
                         contentDescription = "rotation icon",
-                        tint = if(viewModel.isNodeRotationSelected) Color.Green else Color.White
+                        tint = if (viewModel.manipulationState.isNodeRotationSelected) Color.Green else Color.White
                     )
                 }
             }
@@ -195,6 +307,7 @@ fun ARCameraView(
 
     val view = rememberView(engine)
     val collisionSystem = rememberCollisionSystem(view)
+    var isPlaneDetected by remember { mutableStateOf(false) }
 
     BackHandler {
         viewModel.toggleExitDialogState()
@@ -219,6 +332,13 @@ fun ARCameraView(
         planeRenderer = planeRenderer,
         onSessionUpdated = { session, updatedFrame ->
             frame = updatedFrame
+            if(!isPlaneDetected){
+                val detectedPlanes = updatedFrame.getUpdatedPlanes()
+                    .firstOrNull()
+                if(detectedPlanes != null){
+                    viewModel.updateGuides()
+                }
+            }
         },
         onGestureListener = rememberOnGestureListener(
             onSingleTapConfirmed = { motionEvent, node ->

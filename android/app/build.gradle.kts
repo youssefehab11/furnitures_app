@@ -60,6 +60,8 @@ dependencies {
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
+    implementation("com.airbnb.android:lottie-compose:4.0.0")
+
 
     implementation ("com.google.ar:core:1.48.0")
     implementation ("io.github.sceneview:arsceneview:2.2.1")

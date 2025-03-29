@@ -1,4 +1,4 @@
-package com.example.furnitures_app
+package com.example.furnitures_app.components
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon

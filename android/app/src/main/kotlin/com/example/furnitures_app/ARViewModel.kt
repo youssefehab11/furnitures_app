@@ -1,6 +1,5 @@
 package com.example.furnitures_app
 
-import android.app.Activity
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -10,7 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
-import com.google.ar.core.ArCoreApk
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
@@ -38,9 +36,6 @@ class ARViewModel : ViewModel() {
 
     var childNodes = mutableStateListOf<Node>()
 
-    var showUpdateARDialogState by mutableStateOf(false)
-        private set
-
     var showExitDialogState by mutableStateOf(false)
         private set
 
@@ -48,32 +43,6 @@ class ARViewModel : ViewModel() {
         showExitDialogState = !showExitDialogState
     }
 
-    fun getShowUpdateARDialogState() {
-        showUpdateARDialogState = !checkARUpdateStatus()
-    }
-
-    private fun checkARUpdateStatus(): Boolean {
-        val availability =
-            ArCoreApk.getInstance().checkAvailability(ARApplication.getApplicationContext())
-        return when (availability) {
-            ArCoreApk.Availability.SUPPORTED_INSTALLED -> {
-                true
-            }
-
-            else -> {
-                false
-            }
-        }
-    }
-
-    fun requestARInstall(activity: Activity) {
-        try {
-            ArCoreApk.getInstance().requestInstall(activity, true)
-        } catch (e: Exception) {
-            Log.d("Request AR Install", "ARCore not installed: " + e.message.toString())
-            return
-        }
-    }
 
     fun createAnchorNode(
         engine: Engine,
@@ -82,7 +51,8 @@ class ARViewModel : ViewModel() {
         anchor: Anchor,
         model: String
     ) {
-        childNodes += arHelper.createAnchorNode(engine, modelLoader, materialLoader, anchor, model)
+        val node = arHelper.createAnchorNode(engine, modelLoader, materialLoader, anchor, model)
+        childNodes += node
     }
 
     fun clearAnchorsAndNodes() {
@@ -101,9 +71,12 @@ class ARViewModel : ViewModel() {
             modelNode.isPositionEditable = manipulationState.isPositionEditable
             modelNode.isRotationEditable = manipulationState.isRotationEditable
             val lockedY = modelNode.position.y
+            Log.d("lockedY", "lockedY: $lockedY")
             modelNode.onEditingChanged = { editingTransforms ->
                 val currentPos = modelNode.position
+
                 modelNode.position = Position(currentPos.x, lockedY, currentPos.z)
+                Log.d("currentPos", "currentPos: ${modelNode.position}")
             }
         }
     }
@@ -148,14 +121,17 @@ class ARViewModel : ViewModel() {
         }
     }
 
-    fun hideGuides(){
+    private fun hideGuides(){
         guidesState = Guides.HIDE
         Log.d("hideGuides", "hideGuides: I'm in the hide method")
     }
 
     fun updateGuides(){
         guidesState = Guides.SHOW_SECOND
-
+        viewModelScope.launch {
+            delay(5000)
+            hideGuides()
+        }
     }
 }
 

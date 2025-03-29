@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     isARSupported = await HomeScreen.platformMethodChannel.invokeMethod(
       'checkARSupport',
     );
+    print(isARSupported);
     setState(() {});
   }
 

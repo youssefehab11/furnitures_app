@@ -20,6 +20,7 @@ class ARViewModel : ViewModel() {
     private val arHelper = ARHelper()
 
     var guidesState by mutableStateOf(Guides.SHOW_FIRST)
+        private set
 
     var manipulationState by mutableStateOf(
         ManipulationState(
@@ -29,6 +30,7 @@ class ARViewModel : ViewModel() {
             isManipulationListExpand = false,
         )
     )
+        private set
 
     var anchor: Anchor? by mutableStateOf(null)
 
@@ -37,10 +39,27 @@ class ARViewModel : ViewModel() {
     var showExitDialogState by mutableStateOf(false)
         private set
 
+    var isControlsVisible by mutableStateOf(true)
+        private set
+
+    var isDeleteButtonVisible by mutableStateOf(false)
+        private set
+
+    fun toggleDeleteButtonVisibility() {
+        isDeleteButtonVisible = true
+        viewModelScope.launch {
+            delay(2000)
+            isDeleteButtonVisible = false
+        }
+    }
+
     fun toggleExitDialogState() {
         showExitDialogState = !showExitDialogState
     }
 
+    fun toggleControlsVisibility() {
+        isControlsVisible = !isControlsVisible
+    }
 
     fun createAnchorNode(
         engine: Engine,
@@ -61,8 +80,8 @@ class ARViewModel : ViewModel() {
         isPositionEditable: Boolean = false,
         isRotationEditable: Boolean = false,
         isVerticalEditable: Boolean = false
-    ){
-        if(childNodes.isNotEmpty()){
+    ) {
+        if (childNodes.isNotEmpty()) {
             val modelNode = childNodes[0].childNodes.first()
             manipulationState = manipulationState.copy(
                 isPositionEditable = isPositionEditable,
@@ -73,41 +92,6 @@ class ARViewModel : ViewModel() {
         }
 
     }
-//    fun enableNodePositionTransition() {
-//        if (childNodes.isNotEmpty()) {
-//            val modelNode = childNodes[0].childNodes.first()
-//            manipulationState = manipulationState.copy(
-//                isPositionEditable = true,
-//                isRotationEditable = false,
-//                isVerticalEditable = false
-//            )
-//            modelNode.isRotationEditable = manipulationState.isRotationEditable
-//        }
-//    }
-//
-//    fun enableNodeRotation() {
-//        if (childNodes.isNotEmpty()) {
-//            val modelNode = childNodes[0].childNodes.first()
-//            manipulationState = manipulationState.copy(
-//                isPositionEditable = false,
-//                isRotationEditable = true,
-//            )
-//            modelNode.isRotationEditable = manipulationState.isRotationEditable
-//        }
-//
-//    }
-//
-//    fun enableNodeVerticalTransition(){
-//        if(childNodes.isNotEmpty()){
-//            val modelNode = childNodes[0].childNodes.first()
-//            manipulationState = manipulationState.copy(
-//                isPositionEditable = false,
-//                isRotationEditable = false,
-//                isVerticalEditable = true
-//            )
-//            modelNode.isRotationEditable = manipulationState.isRotationEditable
-//        }
-//    }
 
     fun finishManipulation() {
         manipulationState = manipulationState.copy(
@@ -143,6 +127,11 @@ class ARViewModel : ViewModel() {
             delay(5000)
             hideGuides()
         }
+    }
+
+    fun deleteModel() {
+        finishManipulation()
+        arHelper.clearAnchorsAndNodes(childNodes, anchor)
     }
 }
 

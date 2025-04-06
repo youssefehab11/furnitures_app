@@ -2,6 +2,8 @@ package com.example.furnitures_app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -9,11 +11,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,9 +71,17 @@ fun ARView(
         }
         if (viewModel.guidesState != Guides.HIDE)
             ARGuide(modifier, viewModel)
+        Controls(viewModel = viewModel, modifier = modifier)
+    }
+}
+
+@Composable
+fun Controls(viewModel: ARViewModel, modifier: Modifier) {
+    AnimatedVisibility(viewModel.isControlsVisible, enter = fadeIn(), exit = fadeOut()) {
         Column(
             modifier = Modifier
                 .statusBarsPadding()
+                .navigationBarsPadding()
                 .padding(8.dp)
         ) {
             Row(
@@ -87,6 +103,26 @@ fun ARView(
                     padding = 4.dp
                 ) {
 
+                }
+            }
+            AnimatedVisibility(viewModel.isDeleteButtonVisible, enter = fadeIn(), exit = fadeOut()) {
+                Box(
+                    modifier = modifier,
+                    contentAlignment = Alignment.BottomStart
+                ) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            if (viewModel.childNodes.isNotEmpty()) {
+                                viewModel.deleteModel()
+                            }
+                        },
+                        containerColor = Color.White,
+                        contentColor = Color.Red,
+                        shape = CircleShape
+                    ) {
+                        Icon(imageVector = Icons.Outlined.Delete, contentDescription = "delete icon")
+                        Text("Delete")
+                    }
                 }
             }
         }
@@ -202,8 +238,7 @@ fun ARCameraView(
                     detectDragGestures { _, dragAmount ->
                         horizontalTransition(modelNode, dragAmount)
                     }
-                }
-                else if(childNodes.isNotEmpty() && viewModel.manipulationState.isVerticalEditable){
+                } else if (childNodes.isNotEmpty() && viewModel.manipulationState.isVerticalEditable) {
                     val modelNode = childNodes[0].childNodes.first()
                     detectVerticalDragGestures { _, dragAmount ->
                         verticalTransition(modelNode, dragAmount)
@@ -257,7 +292,13 @@ fun ARCameraView(
                         )
                     }
                 }
+                else if(node != null){
+                    viewModel.toggleDeleteButtonVisibility()
+                }
             },
+            onDoubleTap = { _, _ ->
+                viewModel.toggleControlsVisibility()
+            }
         )
     ) {
 

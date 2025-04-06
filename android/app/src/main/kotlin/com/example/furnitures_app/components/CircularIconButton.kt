@@ -3,6 +3,7 @@ package com.example.furnitures_app.components
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +30,7 @@ fun CircularIconButton(
             painterResource(icon),
             tint = color,
             modifier = Modifier
-                .clip(shape = RoundedCornerShape(50.dp))
+                .clip(shape = CircleShape)
                 .background(color = colorResource(R.color.black_transparent))
                 .padding(padding),
             contentDescription = contentDescription

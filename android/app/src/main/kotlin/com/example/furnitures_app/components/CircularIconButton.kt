@@ -2,7 +2,7 @@ package com.example.furnitures_app.components
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,8 +21,8 @@ fun CircularIconButton(
     @DrawableRes icon: Int,
     color: Color,
     contentDescription: String,
+    padding: Dp = 0.dp,
     onClick: () -> Unit,
-    size: Dp = 40.dp
 ){
     IconButton(onClick = { onClick() }) {
         Icon(
@@ -31,7 +31,7 @@ fun CircularIconButton(
             modifier = Modifier
                 .clip(shape = RoundedCornerShape(50.dp))
                 .background(color = colorResource(R.color.black_transparent))
-                .size(size),
+                .padding(padding),
             contentDescription = contentDescription
         )
     }

@@ -11,7 +11,6 @@ import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.math.Position
 import io.github.sceneview.node.Node
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -24,11 +23,10 @@ class ARViewModel : ViewModel() {
 
     var manipulationState by mutableStateOf(
         ManipulationState(
-            isPositionEditable = true,
+            isPositionEditable = false,
             isRotationEditable = false,
+            isVerticalEditable = false,
             isManipulationListExpand = false,
-            isNodeTransitionSelected = false,
-            isNodeRotationSelected = false
         )
     )
 
@@ -59,54 +57,67 @@ class ARViewModel : ViewModel() {
         arHelper.clearAnchorsAndNodes(childNodes, anchor)
     }
 
-    fun enableNodeTransition() {
-        if (childNodes.isNotEmpty()) {
+    fun changeManipulationState(
+        isPositionEditable: Boolean = false,
+        isRotationEditable: Boolean = false,
+        isVerticalEditable: Boolean = false
+    ){
+        if(childNodes.isNotEmpty()){
             val modelNode = childNodes[0].childNodes.first()
             manipulationState = manipulationState.copy(
-                isPositionEditable = false,
-                isRotationEditable = false,
-                isNodeTransitionSelected = true,
-                isNodeRotationSelected = false
-            )
-            modelNode.isPositionEditable = manipulationState.isPositionEditable
-            modelNode.isRotationEditable = manipulationState.isRotationEditable
-            val lockedY = modelNode.position.y
-            Log.d("lockedY", "lockedY: $lockedY")
-            modelNode.onEditingChanged = { editingTransforms ->
-                val currentPos = modelNode.position
-
-                modelNode.position = Position(currentPos.x, lockedY, currentPos.z)
-                Log.d("currentPos", "currentPos: ${modelNode.position}")
-            }
-        }
-    }
-
-    fun enableNodeRotation() {
-        if (childNodes.isNotEmpty()) {
-            val modelNode = childNodes[0].childNodes.first()
-            manipulationState = manipulationState.copy(
-                isPositionEditable = true,
-                isRotationEditable = true,
-                isNodeTransitionSelected = false,
-                isNodeRotationSelected = true
+                isPositionEditable = isPositionEditable,
+                isRotationEditable = isRotationEditable,
+                isVerticalEditable = isVerticalEditable
             )
             modelNode.isRotationEditable = manipulationState.isRotationEditable
-            modelNode.isPositionEditable = manipulationState.isPositionEditable
         }
 
     }
+//    fun enableNodePositionTransition() {
+//        if (childNodes.isNotEmpty()) {
+//            val modelNode = childNodes[0].childNodes.first()
+//            manipulationState = manipulationState.copy(
+//                isPositionEditable = true,
+//                isRotationEditable = false,
+//                isVerticalEditable = false
+//            )
+//            modelNode.isRotationEditable = manipulationState.isRotationEditable
+//        }
+//    }
+//
+//    fun enableNodeRotation() {
+//        if (childNodes.isNotEmpty()) {
+//            val modelNode = childNodes[0].childNodes.first()
+//            manipulationState = manipulationState.copy(
+//                isPositionEditable = false,
+//                isRotationEditable = true,
+//            )
+//            modelNode.isRotationEditable = manipulationState.isRotationEditable
+//        }
+//
+//    }
+//
+//    fun enableNodeVerticalTransition(){
+//        if(childNodes.isNotEmpty()){
+//            val modelNode = childNodes[0].childNodes.first()
+//            manipulationState = manipulationState.copy(
+//                isPositionEditable = false,
+//                isRotationEditable = false,
+//                isVerticalEditable = true
+//            )
+//            modelNode.isRotationEditable = manipulationState.isRotationEditable
+//        }
+//    }
 
     fun finishManipulation() {
         manipulationState = manipulationState.copy(
-            isPositionEditable = true,
+            isPositionEditable = false,
             isRotationEditable = false,
-            isNodeTransitionSelected = false,
-            isNodeRotationSelected = false,
+            isVerticalEditable = false,
             isManipulationListExpand = false
         )
         if (childNodes.isNotEmpty()) {
             val modelNode = childNodes[0].childNodes.first()
-            modelNode.isPositionEditable = manipulationState.isPositionEditable
             modelNode.isRotationEditable = manipulationState.isRotationEditable
         }
     }
@@ -121,12 +132,12 @@ class ARViewModel : ViewModel() {
         }
     }
 
-    private fun hideGuides(){
+    private fun hideGuides() {
         guidesState = Guides.HIDE
         Log.d("hideGuides", "hideGuides: I'm in the hide method")
     }
 
-    fun updateGuides(){
+    fun updateGuides() {
         guidesState = Guides.SHOW_SECOND
         viewModelScope.launch {
             delay(5000)

@@ -1,23 +1,19 @@
 package com.example.furnitures_app
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,11 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.example.furnitures_app.components.CircularIconButton
 import com.example.furnitures_app.components.CustomDialog
 import com.example.furnitures_app.components.CustomGuide
 import com.example.furnitures_app.components.DialogModel
@@ -41,6 +37,7 @@ import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.math.Position
+import io.github.sceneview.node.Node
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
@@ -83,16 +80,13 @@ fun ARView(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                IconButton(onClick = {}) {
-                    Icon(
-                        painterResource(R.drawable.help),
-                        tint = Color.White,
-                        modifier = Modifier
-                            .clip(shape = RoundedCornerShape(50.dp))
-                            .background(color = colorResource(R.color.black_transparent))
-                            .size(40.dp),
-                        contentDescription = "help icon"
-                    )
+                CircularIconButton(
+                    icon = R.drawable.help,
+                    color = Color.White,
+                    contentDescription = "help icon",
+                    padding = 4.dp
+                ) {
+
                 }
             }
         }
@@ -138,52 +132,40 @@ fun SpeedDialObjManipulation(
     viewModel: ARViewModel
 ) {
 
-    Row(
-//        modifier = Modifier
-//            .clip(shape = RoundedCornerShape(50.dp))
-//            .background(color = colorResource(R.color.black_transparent))
-    ) {
+    Row {
         AnimatedVisibility(visible = viewModel.manipulationState.isManipulationListExpand) {
             Row {
-                IconButton(
-                    onClick = {
-                        viewModel.enableNodeTransition()
-                    },
+                CircularIconButton(
+                    icon = R.drawable.transition_cube,
+                    color = if (viewModel.manipulationState.isPositionEditable) Color.Green else Color.White,
+                    contentDescription = "position transition icon",
                 ) {
-                    Icon(
-                        painterResource(R.drawable.transition_cube),
-                        contentDescription = "transition icon",
-                        tint = if (viewModel.manipulationState.isNodeTransitionSelected) Color.Green else Color.White,
-                        modifier = Modifier
-                            .clip(shape = RoundedCornerShape(50.dp))
-                            .background(color = colorResource(R.color.black_transparent))
-                    )
+                    viewModel.changeManipulationState(isPositionEditable = true)
                 }
-                IconButton(
-                    onClick = {
-                        viewModel.enableNodeRotation()
-                    },
+                CircularIconButton(
+                    icon = R.drawable.rotation_cube,
+                    color = if (viewModel.manipulationState.isRotationEditable) Color.Green else Color.White,
+                    contentDescription = "rotation icon",
+                    padding = 4.dp
                 ) {
-                    Icon(
-                        painterResource(R.drawable.rotation_cube),
-                        contentDescription = "rotation icon",
-                        tint = if (viewModel.manipulationState.isNodeRotationSelected) Color.Green else Color.White,
-                        modifier = Modifier
-                            .clip(shape = RoundedCornerShape(50.dp))
-                            .background(color = colorResource(R.color.black_transparent))
-                    )
+                    viewModel.changeManipulationState(isRotationEditable = true)
+                }
+                CircularIconButton(
+                    icon = R.drawable.vertical_transition,
+                    color = if (viewModel.manipulationState.isVerticalEditable) Color.Green else Color.White,
+                    contentDescription = "vertical transition icon",
+                    padding = 8.dp
+                ) {
+                    viewModel.changeManipulationState(isVerticalEditable = true)
                 }
             }
         }
-        IconButton(
-            onClick = { viewModel.toggleManipulationListExpandState() },
+        CircularIconButton(
+            icon = R.drawable.cube,
+            color = Color.White,
+            contentDescription = "cube icon"
         ) {
-            Icon(
-                painterResource(R.drawable.cube), contentDescription = "", tint = Color.White,
-                modifier = Modifier
-                    .clip(shape = RoundedCornerShape(50.dp))
-                    .background(color = colorResource(R.color.black_transparent))
-            )
+            viewModel.toggleManipulationListExpandState()
         }
     }
 }
@@ -199,7 +181,7 @@ fun ARCameraView(
     val modelLoader = rememberModelLoader(engine)
     val materialLoader = rememberMaterialLoader(engine)
 
-    var planeRenderer by remember { mutableStateOf(true) }
+    val planeRenderer by remember { mutableStateOf(true) }
 
     var frame by remember { mutableStateOf<Frame?>(null) }
 
@@ -213,7 +195,21 @@ fun ARCameraView(
         viewModel.toggleExitDialogState()
     }
     ARScene(
-        modifier = modifier,
+        modifier = modifier
+            .pointerInput(viewModel.manipulationState) {
+                if (childNodes.isNotEmpty() && viewModel.manipulationState.isPositionEditable) {
+                    val modelNode = childNodes[0].childNodes.first()
+                    detectDragGestures { _, dragAmount ->
+                        horizontalTransition(modelNode, dragAmount)
+                    }
+                }
+                else if(childNodes.isNotEmpty() && viewModel.manipulationState.isVerticalEditable){
+                    val modelNode = childNodes[0].childNodes.first()
+                    detectVerticalDragGestures { _, dragAmount ->
+                        verticalTransition(modelNode, dragAmount)
+                    }
+                }
+            },
         engine = engine,
         modelLoader = modelLoader,
         materialLoader = materialLoader,
@@ -230,7 +226,7 @@ fun ARCameraView(
         },
 
         planeRenderer = planeRenderer,
-        onSessionUpdated = { session, updatedFrame ->
+        onSessionUpdated = { _, updatedFrame ->
             frame = updatedFrame
             if (!isPlaneDetected) {
                 val detectedPlanes = updatedFrame.getUpdatedPlanes()
@@ -279,5 +275,22 @@ fun ARCameraView(
             dialogModel
         )
     }
+}
 
+fun horizontalTransition(modelNode: Node, dragAmount: Offset) {
+    val currentPos = modelNode.position
+    modelNode.position = Position(
+        x = currentPos.x + dragAmount.x * 0.004f,
+        y = currentPos.y,
+        z = currentPos.z + dragAmount.y * 0.004f
+    )
+}
+
+fun verticalTransition(modelNode: Node, dragAmount: Float) {
+    val currentPos = modelNode.position
+    modelNode.position = Position(
+        x = currentPos.x,
+        y = currentPos.y - dragAmount * 0.004f,
+        z = currentPos.z
+    )
 }

@@ -19,7 +19,9 @@ class ARHelper {
         anchor: Anchor,
         model: String
     ): AnchorNode {
-        val anchorNode = AnchorNode(engine = engine, anchor = anchor)
+        val anchorNode = AnchorNode(engine = engine, anchor = anchor).apply {
+            isPositionEditable = false
+        }
         val modelNode = createModelNode(modelLoader = modelLoader, model = model)
         //createCubeNode(engine,modelNode,materialLoader, anchorNode)
         anchorNode.addChildNode(modelNode)
@@ -36,7 +38,6 @@ class ARHelper {
             // Model Node needs to be editable for independent rotation from the anchor rotation
             //Fixed Model
             isEditable = true
-            isPositionEditable = true
             isRotationEditable = false
             isScaleEditable = false
         }
@@ -79,7 +80,6 @@ class ARHelper {
 data class ManipulationState(
     val isPositionEditable: Boolean,
     val isRotationEditable: Boolean,
+    val isVerticalEditable: Boolean,
     val isManipulationListExpand: Boolean,
-    val isNodeTransitionSelected: Boolean,
-    val isNodeRotationSelected: Boolean
 )
